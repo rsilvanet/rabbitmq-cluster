@@ -7,12 +7,21 @@ namespace RabbitMQ.Shared
     {
         public string Id { get; set; }
         public DateTime StartTime { get; set; }
+        public EStatus Status { get; set; }
         public bool Master { get; set; }
-        public bool Active { get; set; }
 
         public override string ToString()
         {
             return JsonConvert.SerializeObject(this);
+        }
+
+        public enum EStatus
+        {
+            Created,
+            Starting,
+            Running,
+            Stopping,
+            Stopped
         }
     }
 }

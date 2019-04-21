@@ -7,9 +7,8 @@ namespace RabbitMQ.Node
     {
         public static void Main(string[] args)
         {
-            var node = Service.CreateNewNode();
-
-            Console.WriteLine($"Hello, your id is {node.Id}");
+            Service.StartNewNode();
+            Console.Read();
         }
     }
 }
