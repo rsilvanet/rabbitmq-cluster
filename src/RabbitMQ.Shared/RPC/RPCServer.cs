@@ -6,7 +6,7 @@ namespace RabbitMQ.Shared.RPC
 {
     public class RPCServer
     {
-        public void Start(IModel channel)
+        public RPCServer(IModel channel)
         {
             channel.QueueDeclare(
                 queue: "rpc_queue",
