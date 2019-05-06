@@ -6,8 +6,12 @@ namespace RabbitMQ.Shared.RPC
 {
     public class RPCServer
     {
-        public RPCServer(IModel channel)
+        private readonly Node _node;
+
+        public RPCServer(Node node, IModel channel)
         {
+            _node = node;
+
             channel.QueueDeclare(
                 queue: "rpc_queue",
                 durable: false,
@@ -39,19 +43,20 @@ namespace RabbitMQ.Shared.RPC
 
                 replyProps.CorrelationId = props.CorrelationId;
 
-                var response = Encoding.UTF8.GetBytes("Hi from server!");
+                if (_node.Master)
+                {
+                    channel.BasicPublish(
+                        exchange: string.Empty,
+                        routingKey: props.ReplyTo,
+                        basicProperties: replyProps,
+                        body: Encoding.UTF8.GetBytes($"{_node}: Hi, I'm the server!")
+                    );
 
-                channel.BasicPublish(
-                    exchange: string.Empty,
-                    routingKey: props.ReplyTo,
-                    basicProperties: replyProps,
-                    body: response
-                );
-
-                channel.BasicAck(
-                    deliveryTag: ea.DeliveryTag,
-                    multiple: false
-                );
+                    channel.BasicAck(
+                        deliveryTag: ea.DeliveryTag,
+                        multiple: false
+                    );
+                }
             };
         }
     }

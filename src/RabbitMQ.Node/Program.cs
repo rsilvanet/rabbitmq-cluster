@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using RabbitMQ.Shared;
 
 namespace RabbitMQ.Node
@@ -7,8 +8,7 @@ namespace RabbitMQ.Node
     {
         public static void Main(string[] args)
         {
-            Service.StartNewNode();
-            Console.Read();
+            Actions.StartNewNode().Wait();
         }
     }
 }

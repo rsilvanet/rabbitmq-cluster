@@ -33,7 +33,7 @@ namespace RabbitMQ.Shared.RPC
             };
         }
 
-        public Task<string> CallAsync(string message, CancellationToken cToken = default(CancellationToken))
+        public async Task<string> CallAsync(string message, CancellationToken cToken)
         {
             var coId = Guid.NewGuid().ToString();
             var props = _channel.CreateBasicProperties();
@@ -43,7 +43,7 @@ namespace RabbitMQ.Shared.RPC
             var tcs = new TaskCompletionSource<string>();
 
             _callbackMapper.TryAdd(coId, tcs);
-
+                
             _channel.BasicPublish(
                 exchange: "",
                 routingKey: "rpc_queue",
@@ -59,7 +59,7 @@ namespace RabbitMQ.Shared.RPC
 
             cToken.Register(() => _callbackMapper.TryRemove(coId, out var _));
 
-            return tcs.Task;
+            return await tcs.Task;
         }
     }
 }
