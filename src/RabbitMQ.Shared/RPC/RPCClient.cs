@@ -35,31 +35,35 @@ namespace RabbitMQ.Shared.RPC
 
         public async Task<string> CallAsync(string message, CancellationToken cToken)
         {
-            var coId = Guid.NewGuid().ToString();
-            var props = _channel.CreateBasicProperties();
-            props.CorrelationId = coId;
-            props.ReplyTo = _replyQueueName;
+            return await Task.Run(() =>
+            {
+                var coId = Guid.NewGuid().ToString();
+                var props = _channel.CreateBasicProperties();
+                props.CorrelationId = coId;
+                props.ReplyTo = _replyQueueName;
 
-            var tcs = new TaskCompletionSource<string>();
+                var tcs = new TaskCompletionSource<string>();
 
-            _callbackMapper.TryAdd(coId, tcs);
-                
-            _channel.BasicPublish(
-                exchange: "",
-                routingKey: "rpc_queue",
-                basicProperties: props,
-                body: Encoding.UTF8.GetBytes(message)
-            );
+                _callbackMapper.TryAdd(coId, tcs);
 
-            _channel.BasicConsume(
-                consumer: _consumer,
-                queue: _replyQueueName,
-                autoAck: true
-            );
+                _channel.BasicPublish(
+                    exchange: "",
+                    routingKey: "rpc_queue",
+                    basicProperties: props,
+                    body: Encoding.UTF8.GetBytes(message)
+                );
 
-            cToken.Register(() => _callbackMapper.TryRemove(coId, out var _));
+                _channel.BasicConsume(
+                    consumer: _consumer,
+                    queue: _replyQueueName,
+                    autoAck: true
+                );
 
-            return await tcs.Task;
+                cToken.Register(() => _callbackMapper.TryRemove(coId, out var _));
+
+                return tcs.Task;
+
+            }, cToken);
         }
     }
 }
