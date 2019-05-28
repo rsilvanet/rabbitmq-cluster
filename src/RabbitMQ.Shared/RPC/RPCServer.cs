@@ -1,5 +1,6 @@
 ﻿using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using System;
 using System.Text;
 
 namespace RabbitMQ.Shared.RPC
@@ -37,13 +38,15 @@ namespace RabbitMQ.Shared.RPC
                 var replyProps = channel.CreateBasicProperties();
                 var message = Encoding.UTF8.GetString(body);
 
+                Console.WriteLine(message);
+
                 replyProps.CorrelationId = props.CorrelationId;
 
                 channel.BasicPublish(
                     exchange: string.Empty,
                     routingKey: props.ReplyTo,
                     basicProperties: replyProps,
-                    body: Encoding.UTF8.GetBytes($"Hi, I'm the server!")
+                    body: Encoding.UTF8.GetBytes($"Hello from the server!")
                 );
 
                 channel.BasicAck(
