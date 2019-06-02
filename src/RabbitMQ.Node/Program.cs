@@ -1,14 +1,18 @@
 ﻿using RabbitMQ.Client;
 using RabbitMQ.Shared.RPC;
 using System;
-using System.Net.Http;
-using System.Threading;
+using System.Threading
+    ;
+using System.Threading.Tasks;
+
 namespace RabbitMQ.Node
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
+            Console.WriteLine("What will it be (C/S)?");
+
             var cmd = Console.ReadLine();
 
             var factory = new ConnectionFactory()
@@ -27,9 +31,22 @@ namespace RabbitMQ.Node
             {
                 var client = new RPCClient(channel);
                 var cTokenSource = new CancellationTokenSource();
-                Console.WriteLine("This one is a client now.");
-                var message = client.Call("Hello from the client!", cTokenSource.Token).Result;
-                Console.WriteLine(message);
+                cTokenSource.CancelAfter(5000);
+
+                try
+                {
+                    Console.WriteLine("This one is a client now.");
+                    var message = await client.CallAsync("Hello from the client!", cTokenSource.Token);
+                    Console.WriteLine(message);
+                }
+                catch (OperationCanceledException ex)
+                {
+                    Console.WriteLine($"No server found: {ex.Message}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
             }
 
             Console.Read();

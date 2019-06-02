@@ -33,8 +33,10 @@ namespace RabbitMQ.Shared.RPC
             };
         }
 
-        public Task<string> Call(string message, CancellationToken cToken)
+        public async Task<string> CallAsync(string message, CancellationToken cToken)
         {
+            cToken.ThrowIfCancellationRequested();
+
             var coId = Guid.NewGuid().ToString();
             var props = _channel.CreateBasicProperties();
             props.CorrelationId = coId;
@@ -59,7 +61,9 @@ namespace RabbitMQ.Shared.RPC
 
             cToken.Register(() => _callbackMapper.TryRemove(coId, out var _));
 
-            return tcs.Task;
+            tcs.Task.Wait(cToken);
+
+            return await tcs.Task;
         }
     }
 }
