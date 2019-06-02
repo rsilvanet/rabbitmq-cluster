@@ -1,14 +1,20 @@
 ﻿using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using RabbitMQ.Shared.Messages;
 using System;
-using System.Text;
 
 namespace RabbitMQ.Shared.RPC
 {
     public class RPCServer
     {
-        public RPCServer(IModel channel)
+        private readonly string _id;
+        private readonly DateTime _since;
+
+        public RPCServer(IModel channel, string id, DateTime time)
         {
+            _id = id;
+            _since = time;
+
             channel.QueueDeclare(
                 queue: "rpc_queue",
                 durable: false,
@@ -36,9 +42,19 @@ namespace RabbitMQ.Shared.RPC
                 var body = ea.Body;
                 var props = ea.BasicProperties;
                 var replyProps = channel.CreateBasicProperties();
-                var message = Encoding.UTF8.GetString(body);
+                var message = BaseMessage.FromBytes(body);
 
-                Console.WriteLine(message);
+                if (message.SourceId == _id)
+                {
+                    channel.BasicAck(
+                        deliveryTag: ea.DeliveryTag,
+                        multiple: false
+                    );
+
+                    return; // Discards messages from itself
+                }
+
+                Console.WriteLine(message.GenerateLog());
 
                 replyProps.CorrelationId = props.CorrelationId;
 
@@ -46,7 +62,7 @@ namespace RabbitMQ.Shared.RPC
                     exchange: string.Empty,
                     routingKey: props.ReplyTo,
                     basicProperties: replyProps,
-                    body: Encoding.UTF8.GetBytes($"Hello from the server!")
+                    body: new MasterStatusMessage(_id, _since).GetBytes()
                 );
 
                 channel.BasicAck(

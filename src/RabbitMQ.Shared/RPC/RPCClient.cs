@@ -1,8 +1,8 @@
 ﻿using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using RabbitMQ.Shared.Messages;
 using System;
 using System.Collections.Concurrent;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,14 +13,14 @@ namespace RabbitMQ.Shared.RPC
         private readonly IModel _channel;
         private readonly string _replyQueueName;
         private readonly EventingBasicConsumer _consumer;
-        private readonly ConcurrentDictionary<string, TaskCompletionSource<string>> _callbackMapper;
+        private readonly ConcurrentDictionary<string, TaskCompletionSource<BaseMessage>> _callbackMapper;
 
         public RPCClient(IModel channel)
         {
             _channel = channel;
             _replyQueueName = channel.QueueDeclare().QueueName;
             _consumer = new EventingBasicConsumer(channel);
-            _callbackMapper = new ConcurrentDictionary<string, TaskCompletionSource<string>>();
+            _callbackMapper = new ConcurrentDictionary<string, TaskCompletionSource<BaseMessage>>();
 
             _consumer.Received += (model, ea) =>
             {
@@ -29,11 +29,11 @@ namespace RabbitMQ.Shared.RPC
                     return;
                 }
 
-                tcs.TrySetResult(Encoding.UTF8.GetString(ea.Body));
+                tcs.TrySetResult(BaseMessage.FromBytes(ea.Body));
             };
         }
 
-        public async Task<string> CallAsync(string message, CancellationToken cToken)
+        public async Task<BaseMessage> CallAsync(BaseMessage message, CancellationToken cToken)
         {
             cToken.ThrowIfCancellationRequested();
 
@@ -42,7 +42,7 @@ namespace RabbitMQ.Shared.RPC
             props.CorrelationId = coId;
             props.ReplyTo = _replyQueueName;
 
-            var tcs = new TaskCompletionSource<string>();
+            var tcs = new TaskCompletionSource<BaseMessage>();
 
             _callbackMapper.TryAdd(coId, tcs);
 
@@ -50,7 +50,7 @@ namespace RabbitMQ.Shared.RPC
                 exchange: "",
                 routingKey: "rpc_queue",
                 basicProperties: props,
-                body: Encoding.UTF8.GetBytes(message)
+                body: message.GetBytes()
             );
 
             _channel.BasicConsume(
@@ -63,7 +63,11 @@ namespace RabbitMQ.Shared.RPC
 
             tcs.Task.Wait(cToken);
 
-            return await tcs.Task;
+            var response = await tcs.Task;
+
+            Console.WriteLine(response.GenerateLog());
+
+            return response;
         }
     }
 }
