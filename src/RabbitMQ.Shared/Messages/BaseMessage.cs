@@ -23,7 +23,7 @@ namespace RabbitMQ.Shared.Messages
         public string SourceId { get; }
         public string MessageId { get; }
         public DateTime Time { get; }
-        public abstract string Type { get; }
+        public abstract MessageType Type { get; }
 
         public byte[] GetBytes()
         {
@@ -64,6 +64,7 @@ namespace RabbitMQ.Shared.Messages
     public enum MessageType
     {
         Discover,
-        MasterStatus
+        MasterStatus,
+        HealthCheck
     }
 }

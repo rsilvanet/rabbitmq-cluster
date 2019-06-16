@@ -12,7 +12,7 @@ namespace RabbitMQ.Shared.Messages
 
         public DateTime Since { get; }
 
-        public override string Type => MessageType.MasterStatus.ToString();
+        public override MessageType Type => MessageType.MasterStatus;
 
         public override string ToString() => $"The master is {SourceId} since {Since}.";
     }
