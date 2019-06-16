@@ -22,28 +22,47 @@ namespace RabbitMQ.Node
             {
                 HostName = "localhost",
             };
-            
-            var channel = factory.CreateConnection().CreateModel();
-            var client = new RPCClient(channel);
-            var cTokenSource = new CancellationTokenSource();
-            cTokenSource.CancelAfter(5000);
+            using (var connection = factory.CreateConnection())
+            {
+                using (var channel = connection.CreateModel())
+                {
+                    var client = new RPCClient(channel);
+                    var cTokenSource = new CancellationTokenSource();
+                    cTokenSource.CancelAfter(5000);
 
-            try
-            {
-                Console.WriteLine("Looking for the master...");
-                await client.CallAsync(discover, cTokenSource.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                new RPCServer(channel, discover.SourceId, DateTime.Now);
-                Console.WriteLine("Master not found. You're the master now.");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
+                    try
+                    {
+                        Console.WriteLine("Looking for the master...");
+                        await client.CallAsync(discover, cTokenSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        new RPCServer(channel, discover.SourceId, DateTime.Now);
+                        Console.WriteLine("Master not found. You're the master now.");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+
+                    while (true)
+                    {
+                        var command = Console.ReadLine();
+
+                        if (command == "quit")
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid command.");
+                        }
+                    }
+                }
             }
 
-            Console.Read();
+            Console.WriteLine("Shutting down.");
+            Thread.Sleep(1500);
         }
     }
 }
